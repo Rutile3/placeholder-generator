@@ -1,0 +1,17 @@
+/* ちょっとした見栄え調整だけ。Bootstrapベース */
+.preview-wrap {
+    display: grid;
+    place-items: center;
+    min-height: 260px;
+    background: repeating-conic-gradient(from 45deg, #f7f7f7 0 25%, #fff 0 50%) 50% / 16px 16px;
+    border-radius: 1rem;
+}
+
+#preview {
+    max-height: 60vh;
+    background: #fff;
+}
+
+.card-header .small {
+    font-variant-numeric: tabular-nums;
+}
