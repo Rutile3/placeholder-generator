@@ -86,6 +86,16 @@
         return currentObjectUrl;
     };
 
+    // Clipboard capability checks（Commit 6 追加）
+    const hasClipboardImage = () =>
+        "clipboard" in navigator &&
+        typeof navigator.clipboard.write === "function" &&
+        typeof window.ClipboardItem === "function";
+
+    const hasClipboardText = () =>
+        "clipboard" in navigator &&
+        typeof navigator.clipboard.writeText === "function";
+
     const debounce = (fn, ms) => {
         let t;
         return (...args) => {
@@ -261,6 +271,12 @@
     // ---- クリップボード ----
     async function copyImage() {
         try {
+            // 未対応環境の早期リターン（Commit 6）
+            if (!hasClipboardImage()) {
+                showToast("warning", "このブラウザは画像のクリップボードコピーに対応していません。");
+                return;
+            }
+
             const s = gatherState();
             let blob;
             if (s.fmt === "png") {
@@ -271,22 +287,28 @@
                 const svg = makeSvg(s);
                 blob = new Blob([svg], { type: "image/svg+xml" });
             }
+
             await navigator.clipboard.write([new ClipboardItem({ [blob.type]: blob })]);
             showToast("success", "画像をクリップボードにコピーしました。");
         } catch (e) {
-            console.error(e);
-            showToast("danger", "画像コピーに失敗しました。対応ブラウザでお試しください。");
+            console.error("copyImage failed:", e);
+            showToast("danger", "画像コピーに失敗しました。別のブラウザでお試しください。");
         }
     }
 
     async function copyShareUrl() {
         try {
+            if (!hasClipboardText()) {
+                showToast("warning", "このブラウザはテキストのクリップボードコピーに対応していません。");
+                return;
+            }
             const s = gatherState();
             const qs = buildQueryFromState(s);
             const url = `${location.origin}${location.pathname}?${qs}`;
             await navigator.clipboard.writeText(url);
             showToast("success", "共有URLをコピーしました。");
-        } catch {
+        } catch (e) {
+            console.error("copyShareUrl failed:", e);
             showToast("danger", "URLのコピーに失敗しました。");
         }
     }
