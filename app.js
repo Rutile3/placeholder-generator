@@ -61,6 +61,29 @@
         else colorInput.value = normHex(hexInput.value);
     };
 
+    // 追加ユーティリティ
+    // 数値パース（未使用だが次コミットで利用）
+    const toInt = (v, fallback = 0) => {
+        const n = parseInt(String(v ?? ""), 10);
+        return Number.isFinite(n) ? n : fallback;
+    };
+    // Event登録ショートハンド（未使用だが次コミットで利用）
+    const on = (node, type, handler, opts) => node.addEventListener(type, handler, opts);
+    // ObjectURLの破棄を共通化
+    const revokeCurrentUrl = () => {
+        if (currentObjectUrl) {
+            URL.revokeObjectURL(currentObjectUrl);
+            currentObjectUrl = null;
+        }
+    };
+    // 文字列からBlob URLを生成（既存の置き換え）
+    const blobUrlFromString = (str, type) => {
+        revokeCurrentUrl();
+        const blob = new Blob([str], { type });
+        currentObjectUrl = URL.createObjectURL(blob);
+        return currentObjectUrl;
+    };
+
     // ---- 描画（PNG: canvas） ----
     function drawPng({ w, h, bg, fg, text, fontFamily, radius, fontPx, autoFont }) {
         const cvs = el.canvas;
@@ -131,13 +154,6 @@
   </g>
 </svg>`;
         return svg;
-    }
-
-    function blobUrlFromString(str, type) {
-        if (currentObjectUrl) URL.revokeObjectURL(currentObjectUrl);
-        const blob = new Blob([str], { type });
-        currentObjectUrl = URL.createObjectURL(blob);
-        return currentObjectUrl;
     }
 
     // ---- 状態 → プレビュー更新 ----
