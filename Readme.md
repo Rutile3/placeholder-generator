@@ -23,26 +23,30 @@ Webブラウザ上でダミー画像（プレースホルダー）を生成で�
 
 ---
 
-## 🛠 使い方
+## 🚀 使い方
 
-1. このリポジトリをクローン、または ZIP でダウンロードします。
+以下のURLを開くだけで利用できます。  
+👉 **[https://yourname.github.io/placeholder-generator/](https://yourname.github.io/placeholder-generator/)**
+
+ブラウザ上でサイズ・色・文字などを設定し、「プレビュー更新」をクリックしてください。  
+生成した画像はそのままダウンロード・コピー・共有できます。
+
+---
+
+## 🧑‍💻 開発環境構築
+
+機能を改造したい場合や、ローカルで検証したい場合は以下の手順でセットアップします。
+
+1. このリポジトリをクローン、または ZIP ダウンロードします。
 
    ```bash
    git clone https://github.com/yourname/placeholder-generator.git
    ```
 
-2. 以下の 3 ファイルを GitHub リポジトリのルートディレクトリに配置します。
+2. 任意のHTTPサーバを起動して `index.html` を開きます。  
+   例：VSCode拡張機能 **Live Server**
 
-   ```text
-   index.html
-   styles.css
-   app.js
-   ```
-
-3. **GitHub Pages** を **mainブランチ / root** に設定して有効化します。
-
-4. 公開された URL にアクセスし、フォームからサイズや色を設定して「プレビュー更新」をクリック。
-   そのまま画像を保存・コピー・共有できます。
+3. ブラウザで `http://localhost:ポート番号` にアクセスして動作を確認します。
 
 ---
 
