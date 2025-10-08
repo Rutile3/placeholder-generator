@@ -86,7 +86,7 @@
         return currentObjectUrl;
     };
 
-    // Clipboard capability checks（Commit 6 追加）
+    // Clipboard capability checks
     const hasClipboardImage = () =>
         "clipboard" in navigator &&
         typeof navigator.clipboard.write === "function" &&
@@ -271,7 +271,7 @@
     // ---- クリップボード ----
     async function copyImage() {
         try {
-            // 未対応環境の早期リターン（Commit 6）
+            // 未対応環境の早期リターン
             if (!hasClipboardImage()) {
                 showToast("warning", "このブラウザは画像のクリップボードコピーに対応していません。");
                 return;
@@ -350,6 +350,9 @@
                 updatePreview(true);
             }, 0);
         });
+
+        // ★ ObjectURL のクリーンアップ（ページ離脱時）
+        on(window, "beforeunload", revokeCurrentUrl);
     }
 
     // デバウンス済みのプレビュー更新（イベント束ね用）
