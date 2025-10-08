@@ -61,13 +61,12 @@
         else colorInput.value = normHex(hexInput.value);
     };
 
-    // 追加ユーティリティ
-    // 数値パース（未使用だが次コミットで利用）
+    // 数値パース
     const toInt = (v, fallback = 0) => {
         const n = parseInt(String(v ?? ""), 10);
         return Number.isFinite(n) ? n : fallback;
     };
-    // Event登録ショートハンド（未使用だが次コミットで利用）
+    // Event登録ショートハンド
     const on = (node, type, handler, opts) => node.addEventListener(type, handler, opts);
     // ObjectURLの破棄を共通化
     const revokeCurrentUrl = () => {
@@ -76,7 +75,7 @@
             currentObjectUrl = null;
         }
     };
-    // 文字列からBlob URLを生成（既存の置き換え）
+    // 文字列からBlob URLを生成
     const blobUrlFromString = (str, type) => {
         revokeCurrentUrl();
         const blob = new Blob([str], { type });
@@ -87,8 +86,6 @@
     // ---- 描画（PNG: canvas） ----
     function drawPng({ w, h, bg, fg, text, fontFamily, radius, fontPx, autoFont }) {
         const cvs = el.canvas;
-
-        // ★ 出力サイズは要求通りのピクセル数に固定（DPR無視／常に@1x）
         cvs.width = w;
         cvs.height = h;
 
@@ -127,7 +124,6 @@
         }
 
         ctx.restore();
-        // ★ この dataURL は w×h ちょうどのPNGになります
         return cvs.toDataURL("image/png");
     }
 
@@ -158,30 +154,25 @@
 
     // ---- 状態 → プレビュー更新 ----
     function gatherState() {
-        const w = clamp(parseInt(el.width.value || "0", 10), 1, 4000);
-        const h = clamp(parseInt(el.height.value || "0", 10), 1, 4000);
-        const bg = normHex(el.bgHex.value || el.bg.value);
-        const fg = normHex(el.fgHex.value || el.fg.value);
-        const radius = clamp(parseInt(el.radius.value || "0", 10), 0, 400);
+        const w = clamp(toInt(el.width.value, DEFAULTS.w), 1, 4000);
+        const h = clamp(toInt(el.height.value, DEFAULTS.h), 1, 4000);
+        const bg = normHex(el.bgHex.value || el.bg.value || DEFAULTS.bg);
+        const fg = normHex(el.fgHex.value || el.fg.value || DEFAULTS.fg);
+        const radius = clamp(toInt(el.radius.value, DEFAULTS.radius), 0, 400);
         const autoFont = el.autoFont.checked;
-        const fontPx = clamp(parseInt(el.fontSize.value || String(DEFAULTS.fontPx), 10), 6, 512);
-        const fmt = el.format.value;
+        const fontPx = clamp(toInt(el.fontSize.value, DEFAULTS.fontPx), 6, 512);
+        const fmt = el.format.value || DEFAULTS.fmt;
 
         let text = el.label.value.trim();
         if (!text) text = TEXT_PLACEHOLDER;
         text = text.replaceAll("{w}", String(w)).replaceAll("{h}", String(h));
 
-        return {
-            w, h, bg, fg, text,
-            fontFamily: el.font.value,
-            radius, autoFont, fontPx, fmt
-        };
+        return { w, h, bg, fg, text, fontFamily: el.font.value, radius, autoFont, fontPx, fmt };
     }
 
     function updatePreview(pushUrl = false) {
         const s = gatherState();
 
-        // 大きすぎる画像のガード
         if (s.w * s.h > MAX_PIXELS) {
             showToast("warning", "画像が大きすぎます（総ピクセル 1600 万超）。サイズを小さくしてください。");
             return;
@@ -225,18 +216,17 @@
 
     function restoreFromQuery() {
         const p = new URLSearchParams(location.search);
-        const w = parseInt(p.get("w") || String(DEFAULTS.w), 10);
-        const h = parseInt(p.get("h") || String(DEFAULTS.h), 10);
+        const w = clamp(toInt(p.get("w"), DEFAULTS.w), 1, 4000);
+        const h = clamp(toInt(p.get("h"), DEFAULTS.h), 1, 4000);
         const bg = "#" + (p.get("bg") || DEFAULTS.bg.slice(1));
         const fg = "#" + (p.get("fg") || DEFAULTS.fg.slice(1));
         const text = p.get("text") || "";
         const fmt = (p.get("fmt") || DEFAULTS.fmt).toLowerCase();
-        const br = parseInt(p.get("br") || String(DEFAULTS.radius), 10);
-        const fs = p.has("fs") ? parseInt(p.get("fs") || String(DEFAULTS.fontPx), 10) : null;
+        const br = clamp(toInt(p.get("br"), DEFAULTS.radius), 0, 400);
+        const fs = p.has("fs") ? toInt(p.get("fs"), DEFAULTS.fontPx) : null;
 
-        el.width.value = clamp(w, 1, 4000);
-        el.height.value = clamp(h, 1, 4000);
-
+        el.width.value = w;
+        el.height.value = h;
         el.bg.value = normHex(bg);
         el.bgHex.value = normHex(bg);
         el.fg.value = normHex(fg);
@@ -244,7 +234,7 @@
 
         if (text) el.label.value = text;
         el.format.value = (fmt === "svg" ? "svg" : "png");
-        el.radius.value = clamp(br, 0, 400);
+        el.radius.value = br;
 
         if (fs !== null) {
             el.autoFont.checked = false;
@@ -289,41 +279,49 @@
     // ---- イベント ----
     function bind() {
         // 色同期
-        el.bg.addEventListener("input", () => { updateColorTwin(el.bg, el.bgHex, "color"); updatePreview(true); });
-        el.bgHex.addEventListener("input", () => { updateColorTwin(el.bg, el.bgHex, "hex"); updatePreview(true); });
-        el.fg.addEventListener("input", () => { updateColorTwin(el.fg, el.fgHex, "color"); updatePreview(true); });
-        el.fgHex.addEventListener("input", () => { updateColorTwin(el.fg, el.fgHex, "hex"); updatePreview(true); });
+        on(el.bg, "input", () => { updateColorTwin(el.bg, el.bgHex, "color"); updatePreview(true); });
+        on(el.bgHex, "input", () => { updateColorTwin(el.bg, el.bgHex, "hex"); updatePreview(true); });
+        on(el.fg, "input", () => { updateColorTwin(el.fg, el.fgHex, "color"); updatePreview(true); });
+        on(el.fgHex, "input", () => { updateColorTwin(el.fg, el.fgHex, "hex"); updatePreview(true); });
 
         // 自動フォント切替
-        el.autoFont.addEventListener("change", () => {
+        on(el.autoFont, "change", () => {
             el.fontSize.disabled = el.autoFont.checked;
             updatePreview(true);
         });
 
-        // 入力で即時更新（過負荷防止に軽いデバウンス）
+        // 入力で即時更新（デバウンス）
         const onChange = debounce(() => updatePreview(true), 80);
         ["width", "height", "label", "font", "radius", "fontSize", "format"].forEach(id => {
-            $("#" + id).addEventListener("input", onChange);
-            $("#" + id).addEventListener("change", onChange);
+            const elem = $("#" + id);
+            on(elem, "input", onChange);
+            on(elem, "change", onChange);
         });
 
-        el.btnGen.addEventListener("click", () => updatePreview(true));
-        el.btnCopy.addEventListener("click", copyImage);
-        el.btnCopyUrl.addEventListener("click", copyShareUrl);
-        el.btnReset.addEventListener("click", () => {
-            setTimeout(() => { // reset 直後に値が戻る時間を待つ
-                el.bg.value = DEFAULTS.bg; el.bgHex.value = DEFAULTS.bg;
-                el.fg.value = DEFAULTS.fg; el.fgHex.value = DEFAULTS.fg;
-                el.autoFont.checked = true; el.fontSize.disabled = true;
+        on(el.btnGen, "click", () => updatePreview(true));
+        on(el.btnCopy, "click", copyImage);
+        on(el.btnCopyUrl, "click", copyShareUrl);
+        on(el.btnReset, "click", () => {
+            setTimeout(() => {
+                el.bg.value = DEFAULTS.bg;
+                el.bgHex.value = DEFAULTS.bg;
+                el.fg.value = DEFAULTS.fg;
+                el.fgHex.value = DEFAULTS.fg;
+                el.autoFont.checked = true;
+                el.fontSize.disabled = true;
                 history.replaceState(null, "", location.pathname);
                 updatePreview(true);
             }, 0);
         });
     }
 
-    function debounce(fn, ms) {
-        let t; return (...args) => { clearTimeout(t); t = setTimeout(() => fn(...args), ms); };
-    }
+    const debounce = (fn, ms) => {
+        let t;
+        return (...args) => {
+            clearTimeout(t);
+            t = setTimeout(() => fn(...args), ms);
+        };
+    };
 
     // ---- init ----
     restoreFromQuery();
