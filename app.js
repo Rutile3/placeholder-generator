@@ -1,7 +1,18 @@
-/* ダミー画像ジェネレーター（GitHub Pages 用・クライアント完結）
-   ※ 出力画像の実寸がOSスケーリングに影響されないよう、DPRは使用しません（常に @1x）。 */
 (() => {
     const $ = (sel) => document.querySelector(sel);
+
+    // ---- 定数（マジックナンバー排除）----
+    const MAX_PIXELS = 16_000_000; // 16MP ガード用
+    const TEXT_PLACEHOLDER = "{w} × {h}";
+    const DEFAULTS = {
+        w: 150,
+        h: 150,
+        bg: "#d1d5db",
+        fg: "#6b7280",
+        radius: 0,
+        fontPx: 24,
+        fmt: "png"
+    };
 
     // 要素参照
     const el = {
@@ -137,11 +148,11 @@
         const fg = normHex(el.fgHex.value || el.fg.value);
         const radius = clamp(parseInt(el.radius.value || "0", 10), 0, 400);
         const autoFont = el.autoFont.checked;
-        const fontPx = clamp(parseInt(el.fontSize.value || "24", 10), 6, 512);
+        const fontPx = clamp(parseInt(el.fontSize.value || String(DEFAULTS.fontPx), 10), 6, 512);
         const fmt = el.format.value;
 
         let text = el.label.value.trim();
-        if (!text) text = "{w} × {h}";
+        if (!text) text = TEXT_PLACEHOLDER;
         text = text.replaceAll("{w}", String(w)).replaceAll("{h}", String(h));
 
         return {
@@ -155,7 +166,7 @@
         const s = gatherState();
 
         // 大きすぎる画像のガード
-        if (s.w * s.h > 16_000_000) { // 16MP
+        if (s.w * s.h > MAX_PIXELS) {
             showToast("warning", "画像が大きすぎます（総ピクセル 1600 万超）。サイズを小さくしてください。");
             return;
         }
@@ -198,14 +209,14 @@
 
     function restoreFromQuery() {
         const p = new URLSearchParams(location.search);
-        const w = parseInt(p.get("w") || "150", 10);
-        const h = parseInt(p.get("h") || "150", 10);
-        const bg = "#" + (p.get("bg") || "d1d5db");
-        const fg = "#" + (p.get("fg") || "6b7280");
+        const w = parseInt(p.get("w") || String(DEFAULTS.w), 10);
+        const h = parseInt(p.get("h") || String(DEFAULTS.h), 10);
+        const bg = "#" + (p.get("bg") || DEFAULTS.bg.slice(1));
+        const fg = "#" + (p.get("fg") || DEFAULTS.fg.slice(1));
         const text = p.get("text") || "";
-        const fmt = (p.get("fmt") || "png").toLowerCase();
-        const br = parseInt(p.get("br") || "0", 10);
-        const fs = p.has("fs") ? parseInt(p.get("fs") || "24", 10) : null;
+        const fmt = (p.get("fmt") || DEFAULTS.fmt).toLowerCase();
+        const br = parseInt(p.get("br") || String(DEFAULTS.radius), 10);
+        const fs = p.has("fs") ? parseInt(p.get("fs") || String(DEFAULTS.fontPx), 10) : null;
 
         el.width.value = clamp(w, 1, 4000);
         el.height.value = clamp(h, 1, 4000);
@@ -285,8 +296,8 @@
         el.btnCopyUrl.addEventListener("click", copyShareUrl);
         el.btnReset.addEventListener("click", () => {
             setTimeout(() => { // reset 直後に値が戻る時間を待つ
-                el.bg.value = "#d1d5db"; el.bgHex.value = "#d1d5db";
-                el.fg.value = "#6b7280"; el.fgHex.value = "#6b7280";
+                el.bg.value = DEFAULTS.bg; el.bgHex.value = DEFAULTS.bg;
+                el.fg.value = DEFAULTS.fg; el.fgHex.value = DEFAULTS.fg;
                 el.autoFont.checked = true; el.fontSize.disabled = true;
                 history.replaceState(null, "", location.pathname);
                 updatePreview(true);
