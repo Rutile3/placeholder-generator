@@ -92,27 +92,25 @@
         const ctx = cvs.getContext("2d");
         ctx.save();
 
-        // 角丸矩形
+        // 背景（角丸ガード）
         const r = clamp(radius, 0, Math.min(w, h) / 2);
         roundRect(ctx, 0, 0, w, h, r);
         ctx.fillStyle = bg;
         ctx.fill();
 
-        // フォントサイズ自動
-        let fontSize = fontPx;
-        if (autoFont) {
-            fontSize = Math.max(6, Math.round(Math.min(w, h) * 0.20));
-        }
-        ctx.font = `${fontSize}px ${fontFamily}`;
+        // フォント設定（自動サイズは短辺20%を基準、最小6px）
+        const size = autoFont ? Math.max(6, Math.round(Math.min(w, h) * 0.20)) : fontPx;
+        ctx.font = `${size}px ${fontFamily}`;
         ctx.fillStyle = fg;
         ctx.textAlign = "center";
         ctx.textBaseline = "middle";
 
-        // 長文のとき縮小
-        let metrics = ctx.measureText(text);
-        const pad = Math.max(8, fontSize * 0.4);
-        const maxW = w - pad * 2;
-        if (metrics.width > maxW) {
+        // テキストあふれ対策（横幅基準・パディング込み）
+        const metrics = ctx.measureText(text);
+        const pad = Math.max(8, size * 0.4);
+        const maxW = Math.max(0, w - pad * 2);
+
+        if (metrics.width > maxW && metrics.width > 0) {
             const scale = maxW / metrics.width;
             ctx.save();
             ctx.translate(w / 2, h / 2);
@@ -141,10 +139,17 @@
     // ---- 描画（SVG文字列） ----
     function makeSvg({ w, h, bg, fg, text, fontFamily, radius, fontPx, autoFont }) {
         const px = autoFont ? Math.max(6, Math.round(Math.min(w, h) * 0.20)) : fontPx;
-        const esc = (s) => String(s).replaceAll("&", "&amp;").replaceAll("<", "&lt;").replaceAll(">", "&gt;");
+        const esc = (v) =>
+            String(v)
+                .replaceAll("&", "&amp;")
+                .replaceAll("<", "&lt;")
+                .replaceAll(">", "&gt;");
+        const rx = clamp(radius, 0, Math.min(w, h) / 2);
+
+        // SVGではテキストの縮小制御はブラウザ描画に委ねる（簡潔・高速）
         const svg =
             `<svg xmlns="http://www.w3.org/2000/svg" width="${w}" height="${h}" viewBox="0 0 ${w} ${h}">
-  <rect x="0" y="0" width="${w}" height="${h}" rx="${clamp(radius, 0, Math.min(w, h) / 2)}" fill="${bg}"/>
+  <rect x="0" y="0" width="${w}" height="${h}" rx="${rx}" fill="${bg}"/>
   <g font-family="${esc(fontFamily)}" font-size="${px}" fill="${fg}">
     <text x="${w / 2}" y="${h / 2}" text-anchor="middle" dominant-baseline="middle">${esc(text)}</text>
   </g>
@@ -173,6 +178,7 @@
     function updatePreview(pushUrl = false) {
         const s = gatherState();
 
+        // 大きすぎる画像のガード
         if (s.w * s.h > MAX_PIXELS) {
             showToast("warning", "画像が大きすぎます（総ピクセル 1600 万超）。サイズを小さくしてください。");
             return;
@@ -180,8 +186,7 @@
 
         let url, filename;
         if (s.fmt === "png") {
-            const dataUrl = drawPng(s);
-            url = dataUrl;
+            url = drawPng(s);
             filename = `placeholder-${s.w}x${s.h}.png`;
         } else {
             const svg = makeSvg(s);
