@@ -14,6 +14,9 @@
         fmt: "png"
     };
 
+    // 入力系要素ID（イベント束ね用）
+    const INPUT_IDS = ["width", "height", "label", "font", "radius", "fontSize", "format"];
+
     // 要素参照
     const el = {
         form: $("#form"),
@@ -83,6 +86,14 @@
         return currentObjectUrl;
     };
 
+    const debounce = (fn, ms) => {
+        let t;
+        return (...args) => {
+            clearTimeout(t);
+            t = setTimeout(() => fn(...args), ms);
+        };
+    };
+
     // ---- 描画（PNG: canvas） ----
     function drawPng({ w, h, bg, fg, text, fontFamily, radius, fontPx, autoFont }) {
         const cvs = el.canvas;
@@ -146,7 +157,6 @@
                 .replaceAll(">", "&gt;");
         const rx = clamp(radius, 0, Math.min(w, h) / 2);
 
-        // SVGではテキストの縮小制御はブラウザ描画に委ねる（簡潔・高速）
         const svg =
             `<svg xmlns="http://www.w3.org/2000/svg" width="${w}" height="${h}" viewBox="0 0 ${w} ${h}">
   <rect x="0" y="0" width="${w}" height="${h}" rx="${rx}" fill="${bg}"/>
@@ -283,30 +293,30 @@
 
     // ---- イベント ----
     function bind() {
-        // 色同期
-        on(el.bg, "input", () => { updateColorTwin(el.bg, el.bgHex, "color"); updatePreview(true); });
-        on(el.bgHex, "input", () => { updateColorTwin(el.bg, el.bgHex, "hex"); updatePreview(true); });
-        on(el.fg, "input", () => { updateColorTwin(el.fg, el.fgHex, "color"); updatePreview(true); });
-        on(el.fgHex, "input", () => { updateColorTwin(el.fg, el.fgHex, "hex"); updatePreview(true); });
+        // 色同期（双方向）
+        on(el.bg, "input", () => { updateColorTwin(el.bg, el.bgHex, "color"); scheduleUpdate(); });
+        on(el.bgHex, "input", () => { updateColorTwin(el.bg, el.bgHex, "hex"); scheduleUpdate(); });
+        on(el.fg, "input", () => { updateColorTwin(el.fg, el.fgHex, "color"); scheduleUpdate(); });
+        on(el.fgHex, "input", () => { updateColorTwin(el.fg, el.fgHex, "hex"); scheduleUpdate(); });
 
         // 自動フォント切替
         on(el.autoFont, "change", () => {
             el.fontSize.disabled = el.autoFont.checked;
-            updatePreview(true);
+            scheduleUpdate();
         });
 
         // 入力で即時更新（デバウンス）
-        const onChange = debounce(() => updatePreview(true), 80);
-        ["width", "height", "label", "font", "radius", "fontSize", "format"].forEach(id => {
-            const elem = $("#" + id);
-            on(elem, "input", onChange);
-            on(elem, "change", onChange);
+        INPUT_IDS.forEach(id => {
+            const node = $("#" + id);
+            on(node, "input", scheduleUpdate);
+            on(node, "change", scheduleUpdate);
         });
 
         on(el.btnGen, "click", () => updatePreview(true));
         on(el.btnCopy, "click", copyImage);
         on(el.btnCopyUrl, "click", copyShareUrl);
         on(el.btnReset, "click", () => {
+            // reset直後は値が戻るので少し遅延
             setTimeout(() => {
                 el.bg.value = DEFAULTS.bg;
                 el.bgHex.value = DEFAULTS.bg;
@@ -320,13 +330,8 @@
         });
     }
 
-    const debounce = (fn, ms) => {
-        let t;
-        return (...args) => {
-            clearTimeout(t);
-            t = setTimeout(() => fn(...args), ms);
-        };
-    };
+    // デバウンス済みのプレビュー更新（イベント束ね用）
+    const scheduleUpdate = debounce(() => updatePreview(true), 80);
 
     // ---- init ----
     restoreFromQuery();
