@@ -104,7 +104,7 @@
         };
     };
 
-    // ---- 描画（PNG: canvas） ----
+    // ---- 描画（PNG: canvas）----
     function drawPng({ w, h, bg, fg, text, fontFamily, radius, fontPx, autoFont }) {
         const cvs = el.canvas;
         cvs.width = w;
@@ -157,7 +157,7 @@
         ctx.closePath();
     }
 
-    // ---- 描画（SVG文字列） ----
+    // ---- 描画（SVG文字列）----
     function makeSvg({ w, h, bg, fg, text, fontFamily, radius, fontPx, autoFont }) {
         const px = autoFont ? Math.max(6, Math.round(Math.min(w, h) * 0.20)) : fontPx;
         const esc = (v) =>
@@ -188,11 +188,20 @@
         const fontPx = clamp(toInt(el.fontSize.value, DEFAULTS.fontPx), 6, 512);
         const fmt = el.format.value || DEFAULTS.fmt;
 
-        let text = el.label.value.trim();
-        if (!text) text = TEXT_PLACEHOLDER;
-        text = text.replaceAll("{w}", String(w)).replaceAll("{h}", String(h));
+        // ここを修正：入力値（生）と表示用テキストを分離
+        const labelRaw = el.label.value;                 // ← 入力欄のそのまま
+        const isEmpty = labelRaw.trim() === "";          // 未入力判定
+        // 表示テキストは、未入力ならプレースホルダーを使い、{w}/{h} を展開
+        let displayText = isEmpty ? TEXT_PLACEHOLDER : labelRaw;
+        displayText = displayText.replaceAll("{w}", String(w)).replaceAll("{h}", String(h));
 
-        return { w, h, bg, fg, text, fontFamily: el.font.value, radius, autoFont, fontPx, fmt };
+        return {
+            w, h, bg, fg,
+            labelRaw,               // URLに使うのはこっち（未入力なら何も書かない）
+            text: displayText,      // 描画・表示用はこちら
+            fontFamily: el.font.value,
+            radius, autoFont, fontPx, fmt
+        };
     }
 
     function updatePreview(pushUrl = false) {
@@ -206,10 +215,10 @@
 
         let url, filename;
         if (s.fmt === "png") {
-            url = drawPng(s);
+            url = drawPng(s); // s.text は displayText
             filename = `placeholder-${s.w}x${s.h}.png`;
         } else {
-            const svg = makeSvg(s);
+            const svg = makeSvg(s); // s.text は displayText
             url = blobUrlFromString(svg, "image/svg+xml;charset=UTF-8");
             filename = `placeholder-${s.w}x${s.h}.svg`;
         }
@@ -232,7 +241,10 @@
         q.set("h", s.h);
         q.set("bg", hexNoHash(s.bg));
         q.set("fg", hexNoHash(s.fg));
-        q.set("text", s.text);
+        // ここを修正：未入力なら text を書かない（= URL に出さない）
+        if (s.labelRaw.trim() !== "") {
+            q.set("text", s.labelRaw);
+        }
         q.set("fmt", s.fmt);
         if (s.radius) q.set("br", s.radius);
         if (!s.autoFont) q.set("fs", s.fontPx);
@@ -245,7 +257,7 @@
         const h = clamp(toInt(p.get("h"), DEFAULTS.h), 1, 4000);
         const bg = "#" + (p.get("bg") || DEFAULTS.bg.slice(1));
         const fg = "#" + (p.get("fg") || DEFAULTS.fg.slice(1));
-        const text = p.get("text") || "";
+        const text = p.get("text") || "";  // クエリに text があればそのまま使う
         const fmt = (p.get("fmt") || DEFAULTS.fmt).toLowerCase();
         const br = clamp(toInt(p.get("br"), DEFAULTS.radius), 0, 400);
         const fs = p.has("fs") ? toInt(p.get("fs"), DEFAULTS.fontPx) : null;
@@ -257,7 +269,9 @@
         el.fg.value = normHex(fg);
         el.fgHex.value = normHex(fg);
 
+        // ここは従来通り：「text」がクエリにあるときだけ入力欄に反映
         if (text) el.label.value = text;
+
         el.format.value = (fmt === "svg" ? "svg" : "png");
         el.radius.value = br;
 
