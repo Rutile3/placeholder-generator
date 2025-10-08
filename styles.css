@@ -10,6 +10,12 @@
 #preview {
     max-height: 60vh;
     background: #fff;
+
+    /* ▼ プレビューのにじみ軽減（出力は@1x固定のまま） */
+    image-rendering: -webkit-optimize-contrast;
+    /* Safari系 */
+    image-rendering: crisp-edges;
+    /* 対応ブラウザで輪郭をくっきり */
 }
 
 .card-header .small {

@@ -1,4 +1,5 @@
-/* ダミー画像ジェネレーター（GitHub Pages 用・クライアント完結） */
+/* ダミー画像ジェネレーター（GitHub Pages 用・クライアント完結）
+   ※ 出力画像の実寸がOSスケーリングに影響されないよう、DPRは使用しません（常に @1x）。 */
 (() => {
     const $ = (sel) => document.querySelector(sel);
 
@@ -29,7 +30,6 @@
     };
 
     let currentObjectUrl = null; // SVG/PNGの一時URLを管理して解放
-    const DPR = Math.max(1, Math.min(3, window.devicePixelRatio || 1));
 
     // ---- utils ----
     const clamp = (n, min, max) => Math.min(max, Math.max(min, n));
@@ -53,12 +53,13 @@
     // ---- 描画（PNG: canvas） ----
     function drawPng({ w, h, bg, fg, text, fontFamily, radius, fontPx, autoFont }) {
         const cvs = el.canvas;
-        cvs.width = Math.round(w * DPR);
-        cvs.height = Math.round(h * DPR);
+
+        // ★ 出力サイズは要求通りのピクセル数に固定（DPR無視／常に@1x）
+        cvs.width = w;
+        cvs.height = h;
 
         const ctx = cvs.getContext("2d");
         ctx.save();
-        ctx.scale(DPR, DPR);
 
         // 角丸矩形
         const r = clamp(radius, 0, Math.min(w, h) / 2);
@@ -77,12 +78,11 @@
         ctx.textBaseline = "middle";
 
         // 長文のとき縮小
-        let scale = 1;
         let metrics = ctx.measureText(text);
         const pad = Math.max(8, fontSize * 0.4);
         const maxW = w - pad * 2;
         if (metrics.width > maxW) {
-            scale = maxW / metrics.width;
+            const scale = maxW / metrics.width;
             ctx.save();
             ctx.translate(w / 2, h / 2);
             ctx.scale(scale, scale);
@@ -93,6 +93,7 @@
         }
 
         ctx.restore();
+        // ★ この dataURL は w×h ちょうどのPNGになります
         return cvs.toDataURL("image/png");
     }
 
